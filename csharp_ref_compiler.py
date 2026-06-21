@@ -36,9 +36,30 @@ def parse_toc(toc_path):
         
     return md_files
 
+def resolve_case_insensitive_path(path: Path) -> Path:
+    """Linux環境向けに、大文字小文字を無視して一致するファイルパスを解決する"""
+    if path.exists():
+        return path
+        
+    parent = path.parent
+    if not parent.exists():
+        return path
+        
+    target_name_lower = path.name.lower()
+    try:
+        for child in parent.iterdir():
+            if child.name.lower() == target_name_lower:
+                return child
+    except Exception:
+        pass
+        
+    return path
+
 def resolve_snippet(md_path, source_rel_path, snippet_id=None):
     """Markdownから参照されている.csファイルから、指定されたスニペットコードを抽出する"""
     cs_path = (Path(md_path).parent / source_rel_path).resolve()
+    cs_path = resolve_case_insensitive_path(cs_path)
+    
     if not cs_path.exists():
         print(f"警告: スニペットファイルが見つかりません: {cs_path}")
         return f"<!-- 警告: スニペットファイルが見つかりませんでした: {source_rel_path} -->"
@@ -53,9 +74,9 @@ def resolve_snippet(md_path, source_rel_path, snippet_id=None):
     if not snippet_id:
         return "".join(lines)
 
-    # 指定された snippet_id に対応するコメントタグ // <id> から // </id> までを抽出
-    start_pat = re.compile(rf"^\s*//\s*<\s*{re.escape(snippet_id)}\s*>\s*$")
-    end_pat = re.compile(rf"^\s*//\s*</\s*{re.escape(snippet_id)}\s*>\s*$")
+    # 指定された snippet_id または Snippet{snippet_id} に対応するコメントタグを大文字小文字無視で抽出
+    start_pat = re.compile(rf"^\s*//\s*<\s*(?:Snippet)?{re.escape(snippet_id)}\s*>\s*$", re.IGNORECASE)
+    end_pat = re.compile(rf"^\s*//\s*</\s*(?:Snippet)?{re.escape(snippet_id)}\s*>\s*$", re.IGNORECASE)
     
     extracted_lines = []
     in_snippet = False
@@ -77,6 +98,7 @@ def resolve_snippet(md_path, source_rel_path, snippet_id=None):
     # インデントを揃えて返す
     code = "".join(extracted_lines)
     return textwrap.dedent(code)
+
 
 def expand_markdown(md_path):
     """Markdownファイル内の :::code ... ::: を、対応するC#コードブロックに展開する"""
