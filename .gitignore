@@ -1,0 +1,17 @@
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Local Virtual Environments
+.venv/
+venv/
+ENV/
+
+# Data Directories (Input & Output)
+input/
+output/
+test_input/
+test_output/
