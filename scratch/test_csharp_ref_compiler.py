@@ -35,34 +35,44 @@ namespace Test
         }
         // </MySnippet>
         
-        // <AnotherSnippet>
+        // <SnippetAnotherSnippet>
         static int Add(int a, int b) => a + b;
-        // </AnotherSnippet>
+        // </SnippetAnotherSnippet>
     }
 }
 """
     cs_dir = tmp_path / "snippets"
     cs_dir.mkdir()
+    # ファイル名は小文字の test.cs
     cs_path = cs_dir / "test.cs"
     cs_path.write_text(cs_content, encoding="utf-8")
     
     md_path = tmp_path / "test.md"
     md_path.write_text("dummy", encoding="utf-8")
     
-    # ID指定ありでスニペットを解決
-    snippet = resolve_snippet(str(md_path), "snippets/test.cs", "MySnippet")
+    # 1. ID指定ありでスニペットを解決 (パスの大文字小文字違いのテスト含む: snippets/TEST.CS)
+    snippet = resolve_snippet(str(md_path), "snippets/TEST.CS", "MySnippet")
     assert "Console.WriteLine" in snippet
     assert "Hello()" in snippet
     assert "using System;" not in snippet
     assert "Add(int a" not in snippet
     
-    # ID指定なしで全体を解決
+    # 2. 'Snippet'プレフィックス付きのタグ抽出テスト
+    snippet_pref = resolve_snippet(str(md_path), "snippets/test.cs", "AnotherSnippet")
+    assert "static int Add" in snippet_pref
+    
+    # 3. タグの大文字小文字無視テスト
+    snippet_case = resolve_snippet(str(md_path), "snippets/test.cs", "anothersnippet")
+    assert "static int Add" in snippet_case
+    
+    # 4. ID指定なしで全体を解決
     full_snippet = resolve_snippet(str(md_path), "snippets/test.cs")
     assert "using System;" in full_snippet
     
-    # 不正なID
+    # 5. 不正なID
     missing_snippet = resolve_snippet(str(md_path), "snippets/test.cs", "Missing")
     assert "警告" in missing_snippet or "見つかりませんでした" in missing_snippet
+
 
 def test_expand_markdown(tmp_path):
     cs_content = """
